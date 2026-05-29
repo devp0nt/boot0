@@ -219,20 +219,22 @@ rethrown — so a `start` caller rejects with your error type.
 ## Logging
 
 boot0 logs its own lifecycle — `service "db" started`, `runtime "app" stopped`,
-a failure — each with a level. Your `log` gets `(level, message, ...details)`,
-so you can route it into any logger.
+a failure — each as one entry: `{ level, message, error?, meta? }`. Route it
+into any logger.
 
 ```ts
 const boot = Boot0.create({
   // enabled by default; pass enabled: false to silence
   logger: {
-    log: (level, message, ...details) => pino()[level](message, ...details),
+    log: ({ level, message, error, meta }) =>
+      pino()[level]({ ...meta, err: error }, message),
   },
 })
 ```
 
-Levels: `debug` for starting/stopping, `info` for started/stopped, `warn` for a
-hook that threw, `error` for a start/stop failure.
+`meta` carries structured context like `{ scope, name, phase }`. Levels: `debug`
+for starting/stopping, `info` for started/stopped, `warn` for a hook that threw,
+`error` for a start/stop failure.
 
 ## Hooks
 
