@@ -171,8 +171,8 @@ instance tracks every service and runtime it made, so teardown catches them all
 await boot.stop() // stop all runtimes, then any leftover services
 await boot.shutdown() // stop everything, run onShutdown callbacks, then exit
 
-// Register cleanup that isn't a service:
-boot.onShutdown(() => clearTempDir())
+// Register named cleanup — a teardown-only service under the hood, so it's logged:
+boot.onShutdown('temp', () => clearTempDir())
 
 // Let boot0 own the process lifecycle:
 const boot = Boot0.create({
@@ -296,7 +296,7 @@ If that's your app, it's the right size.
 | `getOriginal(x)`                      | The started value, unproxied; type inferred (throws before start). |
 | `stop()`                              | Stop all runtimes, then leftover services.                         |
 | `shutdown(code?)`                     | `stop()` + run `onShutdown` callbacks + `process.exit`.            |
-| `onShutdown(cb)`                      | Register a teardown callback. Returns an unregister function.      |
+| `onShutdown(name, cb)`                | Register a named teardown hook (a started service); runs on stop.  |
 
 ### `createService(name, def)`
 
