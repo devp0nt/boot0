@@ -1,3 +1,10 @@
+# [0.4.0](https://github.com/devp0nt/boot0/compare/v0.3.0...v0.4.0) (2026-05-29)
+
+
+### Features
+
+* shutdown accepts a number or string exit code ([4cd105d](https://github.com/devp0nt/boot0/commit/4cd105d793d8fed1fb28f7823e6610cc7002a59e))
+
 # [0.3.0](https://github.com/devp0nt/boot0/compare/v0.2.0...v0.3.0) (2026-05-29)
 
 
