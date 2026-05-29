@@ -1,3 +1,10 @@
+# [0.3.0](https://github.com/devp0nt/boot0/compare/v0.2.0...v0.3.0) (2026-05-29)
+
+
+### Features
+
+* onShutdown takes a name and registers a teardown-only service ([6fce198](https://github.com/devp0nt/boot0/commit/6fce198b38414910ef2c0a8e649eb48c3ec490c0))
+
 # [0.2.0](https://github.com/devp0nt/boot0/compare/v0.1.0...v0.2.0) (2026-05-29)
 
 
