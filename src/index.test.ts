@@ -1,5 +1,5 @@
-import { describe, expect, it, mock, spyOn } from 'bun:test'
-import { Boot0, SERVICE } from './index.js'
+import { describe, expect, expectTypeOf, it, mock, spyOn } from 'bun:test'
+import { Boot0, SERVICE, type ServiceManager, type ServiceStatus } from './index.js'
 
 const quiet = () => Boot0.create({ logger: { enabled: false } })
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -486,5 +486,37 @@ describe('logging', () => {
     const a = boot.createService('a', { start: () => ({}) })
     await boot.startService(a)
     expect(log).not.toHaveBeenCalled()
+  })
+})
+
+// Type-level tests. This function is never called — `tsc` checks its body, and
+// runtime access on an unstarted proxy would throw, so it must not execute.
+function assertTypes() {
+  const boot = Boot0.create()
+  const db = boot.createService('db', { start: () => ({ rows: 7 }) })
+  const cache = boot.createService('cache', { hidden: true, start: () => new Map<string, number>() })
+  const app = boot.createRuntime('app', { db })
+
+  // the proxy is typed as the value, with the manager on the symbol
+  expectTypeOf(db.rows).toBeNumber()
+  expectTypeOf(db[SERVICE]).toEqualTypeOf<ServiceManager<{ rows: number }>>()
+
+  // helpers infer the value from the service — no generic needed
+  expectTypeOf(boot.getOriginal(db)).toEqualTypeOf<{ rows: number }>()
+  expectTypeOf(boot.startService(db)).toEqualTypeOf<Promise<{ rows: number }>>()
+  expectTypeOf(boot.getStatus(db)).toEqualTypeOf<ServiceStatus>()
+
+  // hidden strips the manager from the type
+  expectTypeOf(cache).toEqualTypeOf<Map<string, number>>()
+  expectTypeOf(boot.getOriginal(cache)).toEqualTypeOf<Map<string, number>>()
+
+  // a runtime exposes its services and a status map
+  expectTypeOf(app.db).toEqualTypeOf<typeof db>()
+  expectTypeOf(app.status).toEqualTypeOf<Record<'db', ServiceStatus>>()
+}
+
+describe('types', () => {
+  it('compile-time type assertions hold', () => {
+    expect(typeof assertTypes).toBe('function') // referenced so tsc checks it; never invoked
   })
 })
