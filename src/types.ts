@@ -137,7 +137,11 @@ export interface Boot {
   getOriginal: <S extends object>(service: S) => ServiceValue<S>
   stop: () => Promise<void>
   shutdown: (code?: number) => Promise<void>
-  onShutdown: (callback: () => unknown) => () => void
+  /**
+   * Register a named teardown hook. It is a service born already started with no value, whose `stop` is your callback —
+   * so it's logged by name and torn down with everything else. Returns the hook service.
+   */
+  onShutdown: (name: string, callback: () => unknown) => AnyService
 }
 
 // Internal: the minimal handle ordering and orchestration work against.

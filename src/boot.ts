@@ -1,5 +1,5 @@
 import { createContext } from './context.js'
-import { getManager, makeService, stopManagers } from './service.js'
+import { getManager, makeService, makeShutdownHook, stopManagers } from './service.js'
 import { makeRuntime } from './runtime.js'
 import type { Boot, BootConfig } from './types.js'
 
@@ -32,13 +32,6 @@ export const Boot0 = {
         }
         const started = [...ctx.services].filter((manager) => manager.status === 'started')
         await stopManagers(ctx, started)
-        for (const callback of [...ctx.shutdownCallbacks].reverse()) {
-          try {
-            await callback()
-          } catch (error) {
-            ctx.log({ level: 'warn', message: 'an onShutdown callback threw', error })
-          }
-        }
       },
       shutdown: async (code = 0) => {
         if (shuttingDown) {
@@ -63,15 +56,7 @@ export const Boot0 = {
         }
         process.exit(code)
       },
-      onShutdown: (callback) => {
-        ctx.shutdownCallbacks.push(callback)
-        return () => {
-          const index = ctx.shutdownCallbacks.indexOf(callback)
-          if (index >= 0) {
-            ctx.shutdownCallbacks.splice(index, 1)
-          }
-        }
-      },
+      onShutdown: (name, callback) => makeShutdownHook(ctx, name, callback),
     }
 
     ctx.shutdown = instance.shutdown

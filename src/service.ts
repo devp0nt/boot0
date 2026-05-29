@@ -159,6 +159,54 @@ export const makeService = (ctx: BootContext, name: string, def: ServiceDef<any,
   return makeProxy(manager, requireStarted)
 }
 
+/**
+ * A teardown-only "service": born already started with an empty value, whose `stop` runs the callback. Registered like
+ * any service, so it is torn down (and logged by name) as part of `boot.stop()`.
+ */
+export const makeShutdownHook = (ctx: BootContext, name: string, callback: () => unknown): any => {
+  let status: ServiceStatus = 'started'
+  const value = {}
+
+  const stopSelf = async (): Promise<void> => {
+    if (status !== 'started') {
+      return
+    }
+    status = 'stopping'
+    ctx.log({ level: 'debug', message: `shutdown hook "${name}" running`, meta: { name } })
+    try {
+      await callback()
+      ctx.log({ level: 'info', message: `shutdown hook "${name}" done`, meta: { name } })
+    } catch (error) {
+      ctx.reportError(error, { scope: 'service', name, phase: 'stop' })
+    }
+    status = 'stopped'
+  }
+
+  const manager: InternalManager & ServiceManager<unknown> = {
+    name,
+    deps: [],
+    get status() {
+      return status
+    },
+    get original() {
+      return value
+    },
+    startSelf: async () => {
+      status = 'started'
+    },
+    stopSelf,
+    start: async () => value,
+    stop: stopSelf,
+    restart: async () => {
+      await stopSelf()
+      return value
+    },
+  }
+
+  ctx.services.add(manager)
+  return makeProxy(manager, () => value)
+}
+
 /** Start the targets and their transitive deps in order. Rolls back on failure. */
 export const startManagers = async (ctx: BootContext, targets: InternalManager[]): Promise<void> => {
   const ordered = orderForStart(targets)

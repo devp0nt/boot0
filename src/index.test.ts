@@ -264,7 +264,7 @@ describe('hidden services', () => {
 })
 
 describe('instance teardown', () => {
-  it('stops orphan services and runs onShutdown callbacks (LIFO)', async () => {
+  it('stops orphan services and shutdown hooks in reverse registration order', async () => {
     const boot = quiet()
     const order: string[] = []
     const svc = boot.createService('orphan', {
@@ -275,25 +275,27 @@ describe('instance teardown', () => {
     })
     await boot.startService(svc) // started outside any runtime
 
-    boot.onShutdown(() => {
+    boot.onShutdown('cb1', () => {
       order.push('cb 1')
     })
-    boot.onShutdown(() => {
+    boot.onShutdown('cb2', () => {
       order.push('cb 2')
     })
 
     await boot.stop()
     expect(boot.isServiceStarted(svc)).toBe(false)
-    expect(order).toEqual(['stop orphan', 'cb 2', 'cb 1'])
+    expect(order).toEqual(['cb 2', 'cb 1', 'stop orphan'])
   })
 
-  it('onShutdown returns an unregister function', async () => {
-    const boot = quiet()
-    const cb = mock(() => {})
-    const off = boot.onShutdown(cb)
-    off()
+  it('onShutdown registers a named hook that runs on stop and is logged', async () => {
+    const lines: string[] = []
+    const boot = Boot0.create({ logger: { log: ({ message }) => lines.push(message) } })
+    const ran = mock(() => {})
+    const hook = boot.onShutdown('cleanup', ran)
+    expect(boot.getStatus(hook)).toBe('started')
     await boot.stop()
-    expect(cb).not.toHaveBeenCalled()
+    expect(ran).toHaveBeenCalledTimes(1)
+    expect(lines.some((m) => m.includes('shutdown hook "cleanup"'))).toBe(true)
   })
 
   it('stops every runtime of the instance', async () => {

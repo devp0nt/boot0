@@ -14,7 +14,6 @@ export interface BootContext {
   logger: LoggerConfig
   services: Set<InternalManager>
   runtimes: Set<InternalRuntime>
-  shutdownCallbacks: Array<() => unknown>
   log: (entry: LogEntry) => void
   reportError: (error: unknown, info: ErrorInfo, localHook?: ErrorHook) => unknown
   shutdown: (code?: number) => Promise<void>
@@ -57,7 +56,6 @@ export const createContext = (config: BootConfig): BootContext => {
     logger,
     services: new Set(),
     runtimes: new Set(),
-    shutdownCallbacks: [],
     log: (entry) => {
       if (logger.enabled) {
         logger.log(entry)
