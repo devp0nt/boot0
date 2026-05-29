@@ -137,7 +137,7 @@ export interface Boot {
   getOriginal: <S extends object>(service: S) => ServiceValue<S>
   stop: () => Promise<void>
   /** Stop everything, then `process.exit(code)`. Accepts what `process.exit` does. */
-  shutdown: (code?: number | string) => Promise<void>
+  shutdown: (code?: number | string | null) => Promise<void>
   /**
    * Register a named teardown hook. It is a service born already started with no value, whose `stop` is your callback —
    * so it's logged by name and torn down with everything else. Returns the hook service.

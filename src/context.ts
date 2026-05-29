@@ -16,7 +16,7 @@ export interface BootContext {
   runtimes: Set<InternalRuntime>
   log: (entry: LogEntry) => void
   reportError: (error: unknown, info: ErrorInfo, localHook?: ErrorHook) => unknown
-  shutdown: (code?: number | string) => Promise<void>
+  shutdown: (code?: number | string | null) => Promise<void>
 }
 
 const consoleLog: LoggerConfig['log'] = ({ level, message, error, meta }) => {
