@@ -205,6 +205,25 @@ boot.createService('db', {
 })
 ```
 
+## How it compares
+
+boot0 sits between hand-wiring and a framework.
+
+| Your situation                                                        | Reach for                       |
+| --------------------------------------------------------------------- | ------------------------------- |
+| A few services you can wire in `main.ts`                              | hand-wiring — no library needed |
+| Class-based DI with decorators and auto-resolution                    | tsyringe, InversifyJS, Awilix   |
+| Typed errors and resource scopes at scale                             | Effect (`Layer` / `Scope`)      |
+| Plain functions, ordered start/stop, graceful shutdown, no decorators | boot0                           |
+
+- **vs hand-wiring** — you gain ordered start/stop, transparent restarts, and
+  one teardown that catches everything. You give up almost nothing.
+- **vs container DI** — no decorators, no `reflect-metadata`, no resolving by
+  type or token. You import the proxy directly, so wiring stays explicit and
+  typed.
+- **vs Effect** — far smaller, no monadic buy-in. You give up typed errors and
+  the fiber model. Want those? Effect is the heavier, more powerful tool.
+
 ## API reference
 
 ### `Boot0.create(config?)`
@@ -251,6 +270,28 @@ boot.createService('db', {
 | `status`                           | `idle` → `starting` → `started` → `stopping` → `stopped`. |
 | `original`                         | The started value, unproxied (throws before start).       |
 | `start()` / `stop()` / `restart()` | Drive this service.                                       |
+
+## Caveats
+
+boot0 is a `Proxy` over your value. That buys the stable identity — with a few
+edges worth knowing.
+
+- **`typeof` is always `'function'`.** The proxy target is a function, so
+  `typeof service === 'function'` even for object services. Before start every
+  access throws on purpose; after start it forwards to the real value.
+- **Identity and `instanceof`.** `service instanceof X` works after start (it
+  throws before). If a library keys state by object identity — a `WeakMap`, an
+  internal registry — or brand-checks the receiver, hand it
+  `service[SERVICE].original`, the real unproxied value.
+- **Method binding.** Methods are bound to the real value, so `this` and
+  `#private` fields work when you call `service.method()`. Calling a method with
+  the proxy as an explicit receiver (`Proto.method.call(service)`) can fail a
+  brand check — use `original` there too.
+- **Overhead.** Proxy indirection per access is tiny but not zero. In a hot
+  loop, grab `original` once and use it directly.
+
+When not to use it: a handful of services you can wire by hand don't need a
+library. For typed errors and resource scopes at scale, look at Effect.
 
 ## Requirements
 
