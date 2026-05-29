@@ -124,13 +124,20 @@ Each service carries its own lifecycle, so you can drive it without a runtime.
 await boot.startService(db)
 await boot.restartService(db) // dependents keep their proxy — they don't notice
 boot.isServiceStarted(db) // true
+boot.getStatus(db) // 'started'
+boot.getOriginal<Client>(db) // the real Client, unproxied
 
 // Or through the manager on the symbol:
 import { SERVICE } from '@devp0nt/boot0'
 db[SERVICE].status // 'started'
-db[SERVICE].original // the real Client, unproxied
+db[SERVICE].original // same as boot.getOriginal(db)
 await db[SERVICE].stop()
 ```
+
+`getStatus`, `getOriginal`, and the `*Service` functions take the proxy and read
+the manager for you — so they also work for
+[hidden](#hide-the-manager-from-the-type) services, where `service[SERVICE]`
+isn't on the type.
 
 ## Shut down cleanly
 
@@ -205,24 +212,16 @@ boot.createService('db', {
 })
 ```
 
-## How it compares
+## Where it fits
 
-boot0 sits between hand-wiring and a framework.
+Wiring two services by hand is fine. But once you have a few stateful ones — db,
+queue, http, workers — that must start in order, restart, and shut down cleanly,
+hand-wiring gets fiddly, and a decorator container (tsyringe, Inversify) or
+Effect is more than you wanted.
 
-| Your situation                                                        | Reach for                       |
-| --------------------------------------------------------------------- | ------------------------------- |
-| A few services you can wire in `main.ts`                              | hand-wiring — no library needed |
-| Class-based DI with decorators and auto-resolution                    | tsyringe, InversifyJS, Awilix   |
-| Typed errors and resource scopes at scale                             | Effect (`Layer` / `Scope`)      |
-| Plain functions, ordered start/stop, graceful shutdown, no decorators | boot0                           |
-
-- **vs hand-wiring** — you gain ordered start/stop, transparent restarts, and
-  one teardown that catches everything. You give up almost nothing.
-- **vs container DI** — no decorators, no `reflect-metadata`, no resolving by
-  type or token. You import the proxy directly, so wiring stays explicit and
-  typed.
-- **vs Effect** — far smaller, no monadic buy-in. You give up typed errors and
-  the fiber model. Want those? Effect is the heavier, more powerful tool.
+boot0 is the middle: plain functions, typed proxies, ordered start and stop, and
+graceful shutdown — no decorators, no `reflect-metadata`, nothing new to adopt.
+If that's your app, it's the right size.
 
 ## API reference
 
@@ -247,6 +246,8 @@ boot0 sits between hand-wiring and a framework.
 | `startService(x)` / `stopService(x)`  | Start / stop one service.                                      |
 | `restartService(x)`                   | Stop then start one service.                                   |
 | `isServiceStarted(x)`                 | `boolean`.                                                     |
+| `getStatus(x)`                        | The service's `ServiceStatus`.                                 |
+| `getOriginal<T>(x)`                   | The started value, unproxied (throws before start).            |
 | `stop()`                              | Stop all runtimes, then leftover services.                     |
 | `shutdown(code?)`                     | `stop()` + run `onShutdown` callbacks + `process.exit`.        |
 | `onShutdown(cb)`                      | Register a teardown callback. Returns an unregister function.  |
