@@ -112,6 +112,8 @@ export interface Boot {
   stopService: (service: object) => Promise<void>
   restartService: (service: object) => Promise<unknown>
   isServiceStarted: (service: object) => boolean
+  getStatus: (service: object) => ServiceStatus
+  getOriginal: <T = unknown>(service: object) => T
   stop: () => Promise<void>
   shutdown: (code?: number) => Promise<void>
   onShutdown: (callback: () => unknown) => () => void

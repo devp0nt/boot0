@@ -249,6 +249,17 @@ describe('hidden services', () => {
     expect(svc.ok).toBe(true)
     expect(boot.isServiceStarted(svc)).toBe(true)
   })
+
+  it('getStatus and getOriginal work on a hidden service', async () => {
+    const boot = quiet()
+    const raw = { v: 1 }
+    const svc = boot.createService('hidden', { hidden: true, start: () => raw })
+
+    expect(boot.getStatus(svc)).toBe('idle')
+    await boot.startService(svc)
+    expect(boot.getStatus(svc)).toBe('started')
+    expect(boot.getOriginal<typeof raw>(svc)).toBe(raw)
+  })
 })
 
 describe('instance teardown', () => {

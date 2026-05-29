@@ -15,6 +15,8 @@ export const Boot0 = {
       stopService: (service) => getManager(service).stop(),
       restartService: (service) => getManager(service).restart(),
       isServiceStarted: (service) => getManager(service).status === 'started',
+      getStatus: (service) => getManager(service).status,
+      getOriginal: (service) => getManager(service).original,
       stop: async () => {
         for (const runtime of [...ctx.runtimes].reverse()) {
           try {
