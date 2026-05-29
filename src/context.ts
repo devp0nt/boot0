@@ -4,8 +4,8 @@ import type {
   ErrorInfo,
   InternalManager,
   InternalRuntime,
+  LogEntry,
   LoggerConfig,
-  LogLevel,
 } from './types.js'
 
 /** Shared state every service and runtime of one boot instance runs against. */
@@ -15,19 +15,26 @@ export interface BootContext {
   services: Set<InternalManager>
   runtimes: Set<InternalRuntime>
   shutdownCallbacks: Array<() => unknown>
-  log: (level: LogLevel, message: string, ...details: unknown[]) => void
+  log: (entry: LogEntry) => void
   reportError: (error: unknown, info: ErrorInfo, localHook?: ErrorHook) => unknown
   shutdown: (code?: number) => Promise<void>
 }
 
-const consoleLog: LoggerConfig['log'] = (level, message, ...details) => {
+const consoleLog: LoggerConfig['log'] = ({ level, message, error, meta }) => {
   const line = `[boot0] ${message}`
+  const extra: unknown[] = []
+  if (meta) {
+    extra.push(meta)
+  }
+  if (error !== undefined) {
+    extra.push(error)
+  }
   if (level === 'error') {
-    console.error(line, ...details)
+    console.error(line, ...extra)
   } else if (level === 'warn') {
-    console.warn(line, ...details)
+    console.warn(line, ...extra)
   } else {
-    console.log(line, ...details)
+    console.log(line, ...extra)
   }
 }
 
@@ -35,7 +42,7 @@ const callHook = (ctx: BootContext, hook: () => unknown): void => {
   try {
     void hook()
   } catch (error) {
-    ctx.log('warn', 'an error hook threw', error)
+    ctx.log({ level: 'warn', message: 'an error hook threw', error })
   }
 }
 
@@ -51,9 +58,9 @@ export const createContext = (config: BootConfig): BootContext => {
     services: new Set(),
     runtimes: new Set(),
     shutdownCallbacks: [],
-    log: (level, message, ...details) => {
+    log: (entry) => {
       if (logger.enabled) {
-        logger.log(level, message, ...details)
+        logger.log(entry)
       }
     },
     reportError: (error, info, localHook) => {
@@ -62,10 +69,15 @@ export const createContext = (config: BootConfig): BootContext => {
         try {
           reported = config.transformError(error, info)
         } catch (hookError) {
-          ctx.log('warn', 'transformError threw', hookError)
+          ctx.log({ level: 'warn', message: 'transformError threw', error: hookError })
         }
       }
-      ctx.log('error', `${info.scope} "${info.name}" failed during ${info.phase}`, reported)
+      ctx.log({
+        level: 'error',
+        message: `${info.scope} "${info.name}" failed during ${info.phase}`,
+        error: reported,
+        meta: { ...info },
+      })
       if (config.onError) {
         callHook(ctx, () => config.onError?.(reported, info))
       }

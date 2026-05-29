@@ -21,7 +21,7 @@ const fire = async (ctx: BootContext, label: string, hooks: Array<(() => unknown
     try {
       await hook()
     } catch (error) {
-      ctx.log('warn', `a lifecycle hook for ${label} threw`, error)
+      ctx.log({ level: 'warn', message: `a lifecycle hook for ${label} threw`, error })
     }
   }
 }
@@ -98,7 +98,7 @@ export const makeService = (ctx: BootContext, name: string, def: ServiceDef<any,
       return
     }
     status = 'starting'
-    ctx.log('debug', `service "${name}" starting`)
+    ctx.log({ level: 'debug', message: `service "${name}" starting`, meta: { name } })
     await fire(ctx, label, [() => ctx.config.onServiceStarting?.({ name }), def.onStarting])
     try {
       value = await def.start()
@@ -107,7 +107,7 @@ export const makeService = (ctx: BootContext, name: string, def: ServiceDef<any,
       throw ctx.reportError(error, { scope: 'service', name, phase: 'start' }, def.onError)
     }
     status = 'started'
-    ctx.log('info', `service "${name}" started`)
+    ctx.log({ level: 'info', message: `service "${name}" started`, meta: { name } })
     await fire(ctx, label, [() => ctx.config.onServiceStarted?.({ name }), () => def.onStarted?.(value)])
   }
 
@@ -117,7 +117,7 @@ export const makeService = (ctx: BootContext, name: string, def: ServiceDef<any,
     }
     const current = value
     status = 'stopping'
-    ctx.log('debug', `service "${name}" stopping`)
+    ctx.log({ level: 'debug', message: `service "${name}" stopping`, meta: { name } })
     await fire(ctx, label, [() => ctx.config.onServiceStopping?.({ name }), () => def.onStopping?.(current)])
     try {
       await def.stop?.(current)
@@ -126,7 +126,7 @@ export const makeService = (ctx: BootContext, name: string, def: ServiceDef<any,
     }
     value = undefined
     status = 'stopped'
-    ctx.log('info', `service "${name}" stopped`)
+    ctx.log({ level: 'info', message: `service "${name}" stopped`, meta: { name } })
     await fire(ctx, label, [() => ctx.config.onServiceStopped?.({ name }), def.onStopped])
   }
 
@@ -175,7 +175,12 @@ export const startManagers = async (ctx: BootContext, targets: InternalManager[]
       try {
         await manager.stopSelf()
       } catch (rollbackError) {
-        ctx.log('error', `rollback stop of "${manager.name}" failed`, rollbackError)
+        ctx.log({
+          level: 'error',
+          message: `rollback stop of "${manager.name}" failed`,
+          error: rollbackError,
+          meta: { name: manager.name },
+        })
       }
     }
     if (ctx.config.shutdownOnError) {

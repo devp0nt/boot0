@@ -5,6 +5,7 @@ export type {
   BootConfig,
   ErrorHook,
   ErrorInfo,
+  LogEntry,
   LoggerConfig,
   LogLevel,
   Runtime,

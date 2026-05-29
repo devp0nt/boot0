@@ -453,7 +453,7 @@ describe('error policy', () => {
 describe('logging', () => {
   it('logs lifecycle events with levels through the logger', async () => {
     const lines: Array<[string, string]> = []
-    const boot = Boot0.create({ logger: { log: (level, message) => lines.push([level, message]) } })
+    const boot = Boot0.create({ logger: { log: ({ level, message }) => lines.push([level, message]) } })
     const a = boot.createService('a', { start: () => ({}) })
     const app = boot.createRuntime('app', { a })
 
@@ -468,7 +468,7 @@ describe('logging', () => {
 
   it('logs failures at error level', async () => {
     const lines: Array<[string, string]> = []
-    const boot = Boot0.create({ logger: { log: (level, message) => lines.push([level, message]) } })
+    const boot = Boot0.create({ logger: { log: ({ level, message }) => lines.push([level, message]) } })
     const a = boot.createService('a', {
       start: (): { v: number } => {
         throw new Error('x')

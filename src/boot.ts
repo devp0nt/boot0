@@ -22,7 +22,12 @@ export const Boot0 = {
           try {
             await runtime.stop()
           } catch (error) {
-            ctx.log('error', `runtime "${runtime.name}" stop failed`, error)
+            ctx.log({
+              level: 'error',
+              message: `runtime "${runtime.name}" stop failed`,
+              error,
+              meta: { name: runtime.name },
+            })
           }
         }
         const started = [...ctx.services].filter((manager) => manager.status === 'started')
@@ -31,7 +36,7 @@ export const Boot0 = {
           try {
             await callback()
           } catch (error) {
-            ctx.log('warn', 'an onShutdown callback threw', error)
+            ctx.log({ level: 'warn', message: 'an onShutdown callback threw', error })
           }
         }
       },

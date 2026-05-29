@@ -38,7 +38,12 @@ export const makeRuntime = (
       try {
         await hook()
       } catch (error) {
-        ctx.log('warn', `a lifecycle hook for runtime "${name}" threw`, error)
+        ctx.log({
+          level: 'warn',
+          message: `a lifecycle hook for runtime "${name}" threw`,
+          error,
+          meta: { name },
+        })
       }
     }
   }
@@ -46,7 +51,7 @@ export const makeRuntime = (
   const runtime = {
     ...services,
     start: async (subset?: string[]): Promise<void> => {
-      ctx.log('debug', `runtime "${name}" starting`)
+      ctx.log({ level: 'debug', message: `runtime "${name}" starting`, meta: { name } })
       await fireRuntime([() => ctx.config.onRuntimeStarting?.({ name }), options.onStarting])
       try {
         await startManagers(ctx, resolveTargets(subset))
@@ -55,19 +60,24 @@ export const makeRuntime = (
           try {
             options.onError(error, { scope: 'runtime', name, phase: 'start' })
           } catch (hookError) {
-            ctx.log('warn', `onError hook for runtime "${name}" threw`, hookError)
+            ctx.log({
+              level: 'warn',
+              message: `onError hook for runtime "${name}" threw`,
+              error: hookError,
+              meta: { name },
+            })
           }
         }
         throw error
       }
-      ctx.log('info', `runtime "${name}" started`)
+      ctx.log({ level: 'info', message: `runtime "${name}" started`, meta: { name } })
       await fireRuntime([() => ctx.config.onRuntimeStarted?.({ name }), options.onStarted])
     },
     stop: async (subset?: string[]): Promise<void> => {
-      ctx.log('debug', `runtime "${name}" stopping`)
+      ctx.log({ level: 'debug', message: `runtime "${name}" stopping`, meta: { name } })
       await fireRuntime([() => ctx.config.onRuntimeStopping?.({ name }), options.onStopping])
       await stopManagers(ctx, resolveTargets(subset))
-      ctx.log('info', `runtime "${name}" stopped`)
+      ctx.log({ level: 'info', message: `runtime "${name}" stopped`, meta: { name } })
       await fireRuntime([() => ctx.config.onRuntimeStopped?.({ name }), options.onStopped])
     },
     restart: async (subset?: string[]): Promise<void> => {

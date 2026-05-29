@@ -51,8 +51,17 @@ export interface ServiceDef<TReturn, Hidden extends boolean> {
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
+export interface LogEntry {
+  level: LogLevel
+  message: string
+  /** The thrown value, on a failure log. */
+  error?: unknown
+  /** Structured context about the event, e.g. `{ scope, name, phase }`. */
+  meta?: Record<string, unknown>
+}
+
 export interface LoggerConfig {
-  log: (level: LogLevel, message: string, ...details: unknown[]) => void
+  log: (entry: LogEntry) => void
   enabled: boolean
 }
 
