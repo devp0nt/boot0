@@ -99,6 +99,28 @@ directly — `deps` sets start order, while method calls run later, when
 everything is up. Two services can use each other this way, as long as the
 `deps` edges don't form a cycle.
 
+## Return any shape
+
+A service returns whatever you want — the raw client, or an object that holds it
+next to your own helpers. That object becomes the service's API.
+
+```ts
+const db = boot.createService('db', {
+  start: async () => {
+    const client = new Client(process.env.DATABASE_URL)
+    await client.connect()
+    return {
+      client, // the real instance, reached as db.client
+      ping: () => client.query('select 1'),
+    }
+  },
+  stop: (db) => db.client.end(),
+})
+
+await db.ping()
+db.client.query('...') // the genuine Client — full identity, no proxy edges
+```
+
 ## Run a group
 
 A runtime starts a set of services in dependency order and stops them in
@@ -194,15 +216,31 @@ const boot = Boot0.create({
 The result of `transformError` is what gets logged, sent to `onError`, and
 rethrown — so a `start` caller rejects with your error type.
 
-## Hooks and logging
+## Logging
 
-Plug your own logger and observe the lifecycle. Global hooks live on the
-instance; local hooks live on a service or runtime and run after the global
-ones.
+boot0 logs its own lifecycle — `service "db" started`, `runtime "app" stopped`,
+a failure — each with a level. Your `log` gets `(level, message, ...details)`,
+so you can route it into any logger.
 
 ```ts
 const boot = Boot0.create({
-  logger: { log: pino().info }, // enabled by default; set enabled: false to silence
+  // enabled by default; pass enabled: false to silence
+  logger: {
+    log: (level, message, ...details) => pino()[level](message, ...details),
+  },
+})
+```
+
+Levels: `debug` for starting/stopping, `info` for started/stopped, `warn` for a
+hook that threw, `error` for a start/stop failure.
+
+## Hooks
+
+For your own observability, add hooks. Global hooks live on the instance; local
+hooks live on a service or runtime and run after the global ones.
+
+```ts
+const boot = Boot0.create({
   onServiceStarted: ({ name }) => metrics.up(name),
 })
 
@@ -272,27 +310,22 @@ If that's your app, it's the right size.
 | `original`                         | The started value, unproxied (throws before start).       |
 | `start()` / `stop()` / `restart()` | Drive this service.                                       |
 
-## Caveats
+## Good to know
 
-boot0 is a `Proxy` over your value. That buys the stable identity — with a few
-edges worth knowing.
+boot0 is a `Proxy` over your value — that's what gives you the stable reference.
+For the everyday case (read a property, call a method) it forwards to the real
+value and you never notice. Methods keep the right `this`, so private fields
+work.
 
-- **`typeof` is always `'function'`.** The proxy target is a function, so
-  `typeof service === 'function'` even for object services. Before start every
-  access throws on purpose; after start it forwards to the real value.
-- **Identity and `instanceof`.** `service instanceof X` works after start (it
-  throws before). If a library keys state by object identity — a `WeakMap`, an
-  internal registry — or brand-checks the receiver, hand it
-  `service[SERVICE].original`, the real unproxied value.
-- **Method binding.** Methods are bound to the real value, so `this` and
-  `#private` fields work when you call `service.method()`. Calling a method with
-  the proxy as an explicit receiver (`Proto.method.call(service)`) can fail a
-  brand check — use `original` there too.
-- **Overhead.** Proxy indirection per access is tiny but not zero. In a hot
-  loop, grab `original` once and use it directly.
+One thing worth knowing: if you return a class instance **directly** and some
+code checks its identity — `instanceof`, a `WeakMap` keyed by it, an internal
+brand check — that code sees the proxy, not the instance. The fix is the pattern
+from [Return any shape](#return-any-shape): return `{ client }` and reach the
+real instance as `service.client`. One extra property, every edge gone.
 
-When not to use it: a handful of services you can wire by hand don't need a
-library. For typed errors and resource scopes at scale, look at Effect.
+Two small notes: `typeof service` is always `'function'` (the proxy target is a
+function), and proxy access has a tiny cost — in a hot loop, grab
+`boot.getOriginal(service)` once. That's the whole list.
 
 ## Requirements
 
