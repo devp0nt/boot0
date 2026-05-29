@@ -1,0 +1,9 @@
+# [0.1.0](https://github.com/devp0nt/boot0/compare/v0.0.0...v0.1.0) (2026-05-29)
+
+
+### Features
+
+* add getStatus and getOriginal instance helpers ([460e4a0](https://github.com/devp0nt/boot0/commit/460e4a04b3b929fa011fc98fa36561c929a79a17))
+* add transformError to normalize thrown errors ([ee6248b](https://github.com/devp0nt/boot0/commit/ee6248bb5ef07baaae9893096a10ebc72f871930))
+* infer the value type in getOriginal, startService, restartService ([e719319](https://github.com/devp0nt/boot0/commit/e719319dc0623d0fa084e3cc20a1f27b3a4a1092))
+* log lifecycle events and pass a level to the logger ([d814e2b](https://github.com/devp0nt/boot0/commit/d814e2b361ca88c891b3a3289f1751de2720a389))
