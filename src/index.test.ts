@@ -398,6 +398,25 @@ describe('error policy', () => {
     expect(seen).toEqual([{ scope: 'service', name: 'flaky', phase: 'start' }])
   })
 
+  it('transformError normalizes the error before onError and rethrow', async () => {
+    class AppError extends Error {}
+    const seen: unknown[] = []
+    const boot = Boot0.create({
+      logger: { enabled: false },
+      transformError: (error) => new AppError(String((error as Error).message)),
+      onError: (error) => seen.push(error),
+    })
+    const svc = boot.createService('s', {
+      start: (): { v: number } => {
+        throw new Error('raw')
+      },
+    })
+
+    const rejected = await boot.startService(svc).catch((error: unknown) => error)
+    expect(rejected).toBeInstanceOf(AppError)
+    expect(seen[0]).toBeInstanceOf(AppError)
+  })
+
   it('runs shutdown(1) on an unrecoverable start error when configured', async () => {
     const exit = spyOn(process, 'exit').mockImplementation((() => undefined) as never)
     try {

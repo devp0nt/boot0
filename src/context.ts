@@ -8,7 +8,7 @@ export interface BootContext {
   runtimes: Set<InternalRuntime>
   shutdownCallbacks: Array<() => unknown>
   log: (...args: unknown[]) => void
-  reportError: (error: unknown, info: ErrorInfo, localHook?: ErrorHook) => void
+  reportError: (error: unknown, info: ErrorInfo, localHook?: ErrorHook) => unknown
   shutdown: (code?: number) => Promise<void>
 }
 
@@ -42,13 +42,22 @@ export const createContext = (config: BootConfig): BootContext => {
       }
     },
     reportError: (error, info, localHook) => {
-      ctx.log(`boot0: ${info.scope} "${info.name}" failed during ${info.phase}:`, error)
+      let reported = error
+      if (config.transformError) {
+        try {
+          reported = config.transformError(error, info)
+        } catch (hookError) {
+          ctx.log('boot0: transformError threw:', hookError)
+        }
+      }
+      ctx.log(`boot0: ${info.scope} "${info.name}" failed during ${info.phase}:`, reported)
       if (config.onError) {
-        callHook(ctx, () => config.onError?.(error, info))
+        callHook(ctx, () => config.onError?.(reported, info))
       }
       if (localHook) {
-        callHook(ctx, () => localHook(error, info))
+        callHook(ctx, () => localHook(reported, info))
       }
+      return reported
     },
     shutdown: async () => {
       // Replaced by the boot instance in Boot0.create.

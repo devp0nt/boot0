@@ -103,8 +103,7 @@ export const makeService = (ctx: BootContext, name: string, def: ServiceDef<any,
       value = await def.start()
     } catch (error) {
       status = 'idle'
-      ctx.reportError(error, { scope: 'service', name, phase: 'start' }, def.onError)
-      throw error
+      throw ctx.reportError(error, { scope: 'service', name, phase: 'start' }, def.onError)
     }
     status = 'started'
     await fire(ctx, label, [() => ctx.config.onServiceStarted?.({ name }), () => def.onStarted?.(value)])

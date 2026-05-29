@@ -73,6 +73,8 @@ export interface BootConfig {
   onRuntimeStopping?: (info: RuntimeHookInfo) => unknown
   onRuntimeStopped?: (info: RuntimeHookInfo) => unknown
   onError?: ErrorHook
+  /** Normalize a thrown value before it is logged, sent to `onError`, and rethrown. */
+  transformError?: (error: unknown, info: ErrorInfo) => unknown
   /** On an unrecoverable start error, run `shutdown(1)`. */
   shutdownOnError?: boolean
   /** On SIGINT / SIGTERM, run `shutdown()`. */
