@@ -120,4 +120,7 @@ jobs:
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Bootstrap auth for the first publish. Remove once an npm Trusted
+          # Publisher (OIDC) is configured for @devp0nt/boot0.
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npx semantic-release
