@@ -125,7 +125,8 @@ describe('dependencies', () => {
     // force a cycle a -> b
     ;(a[SERVICE] as unknown as { deps: unknown[] }).deps.push(b[SERVICE])
 
-    expect(boot.createRuntime('app', { a, b }).start()).rejects.toThrow(/dependency cycle/)
+    // the message names the full path and the node it closed on
+    expect(boot.createRuntime('app', { a, b }).start()).rejects.toThrow('dependency cycle: a -> b -> a')
   })
 
   it('rejects non-service deps at construction', () => {
