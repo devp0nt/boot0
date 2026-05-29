@@ -1,6 +1,6 @@
 {
   "name": "@devp0nt/boot0",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Tiny dependency injector and lifecycle manager — start, stop, and restart your services in order, behind stable typed proxies.",
   "keywords": [
     "dependency-injection",

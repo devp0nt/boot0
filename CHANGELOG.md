@@ -1,3 +1,10 @@
+# [0.2.0](https://github.com/devp0nt/boot0/compare/v0.1.0...v0.2.0) (2026-05-29)
+
+
+### Features
+
+* add shutdownOnUncaught and shutdownTimeoutMs, signal exit codes ([8041ecf](https://github.com/devp0nt/boot0/commit/8041ecf88dfeb13eeecadcc2d0929431e5099d3a))
+
 # [0.1.0](https://github.com/devp0nt/boot0/compare/v0.0.0...v0.1.0) (2026-05-29)
 
 
