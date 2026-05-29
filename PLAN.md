@@ -59,22 +59,20 @@ const boot = Boot0.create({
   local hooks (on a service/runtime) are just
   `onStarting/onStarted/onStopping/ onStopped` — context is already clear.
   **Local hooks extend the global ones, they don't replace them.**
-- **Default instance:** besides `Boot0.create(...)`, ship ready
-  `createService`/`createRuntime`/`startService`/`isServiceStarted` as named
-  exports (a default boot with default config) for zero-ceremony use.
+- **One instance, always:** the only entry point is `Boot0.create(...)`. No
+  default singleton / named-export shortcuts — mixing a hidden default instance
+  with your own would split the service/runtime registry and confuse teardown.
 
 ## Instance-level teardown
 
-Naming principle: `stop` tears down the level below; `shutdown` = stop
-everything
+Naming principle: `stop` tears down the level below; `shutdown` stops everything
+and exits the process. The instance **registers every service and runtime it
+creates**, so teardown catches them all — including services started standalone.
 
-- exit the process. The instance **registers every service and runtime it
-  creates**, so teardown catches them all — including services started
-  standalone.
-
-* `boot.stop()` — stop **all runtimes** of this instance, then **any service
+- `boot.stop()` — stop **all runtimes** of this instance, then **any service
   still started outside a runtime** (via `startService` / `x[SERVICE].start()`).
   Process stays alive.
+
 * `boot.shutdown(code?)` — `boot.stop()` + run `onShutdown` callbacks +
   `process.exit(code)` (default `0`).
 * `boot.onShutdown(cb)` — register an ad-hoc teardown callback (not a service).
@@ -207,7 +205,8 @@ export const migrate = boot.createService('migrate', {
   cleanup).
 - `x[SERVICE]` — manager:
   `{ name, status, start(), stop(), restart(), original }`.
-- `SERVICE` symbol + default-instance named exports (`createService`, …).
+- `SERVICE` symbol. The only entry point is `Boot0.create` (no default
+  instance).
 
 Name is the **first positional arg** for both `createService` / `createRuntime`
 — mandatory and identifying; a runtime's services map can't safely carry a
@@ -250,8 +249,8 @@ control methods incl. `isServiceStarted`; createRuntime (topo start, reverse
 stop, subset, cycle detection, start rollback, status map, services exposed as
 props); construction-time validation (deps/services are boot0 services);
 instance-level `stop`/`shutdown`/`onShutdown` +
-`shutdownOnError`/`shutdownOnSignals`; default-instance exports; async
-lifecycle; setup errors throw / runtime errors log.
+`shutdownOnError`/`shutdownOnSignals`; async lifecycle; setup errors throw /
+runtime errors log.
 
 **Out (parked):** separate `create`; deps override at start; `split` runtime
 tuple `[proxy, manager]` / `policy` return-shape (runtime always returns the

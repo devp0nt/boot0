@@ -239,13 +239,6 @@ boot.createService('db', {
 | `original`                         | The started value, unproxied (throws before start).       |
 | `start()` / `stop()` / `restart()` | Drive this service.                                       |
 
-Every instance method is also a named export, backed by a default instance — for
-quick scripts you can skip `Boot0.create`:
-
-```ts
-import { createService, createRuntime, startService } from '@devp0nt/boot0'
-```
-
 ## Requirements
 
 - **Bun 1+** or **Node.js 20+** (ESM only)
