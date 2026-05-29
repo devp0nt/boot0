@@ -1,3 +1,10 @@
+## [0.4.1](https://github.com/devp0nt/boot0/compare/v0.4.0...v0.4.1) (2026-05-29)
+
+
+### Bug Fixes
+
+* shutdown accepts a null exit code too ([030839b](https://github.com/devp0nt/boot0/commit/030839bf4a994f632b9ceaf709e2c921bb0f7d90))
+
 # [0.4.0](https://github.com/devp0nt/boot0/compare/v0.3.0...v0.4.0) (2026-05-29)
 
 
