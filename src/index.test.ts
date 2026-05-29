@@ -508,6 +508,17 @@ describe('shutdown options', () => {
     }
   })
 
+  it('forwards a string exit code to process.exit', async () => {
+    const exit = spyOn(process, 'exit').mockImplementation((() => undefined) as never)
+    try {
+      const boot = Boot0.create({ logger: { enabled: false } })
+      await boot.shutdown('0')
+      expect(exit).toHaveBeenCalledWith('0')
+    } finally {
+      exit.mockRestore()
+    }
+  })
+
   it('registers uncaught handlers when shutdownOnUncaught is set', () => {
     const beforeEx = process.listeners('uncaughtException')
     const beforeRej = process.listeners('unhandledRejection')
