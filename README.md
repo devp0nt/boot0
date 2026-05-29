@@ -94,6 +94,11 @@ const migrate = boot.createService('migrate', {
 A side effect with no value (a migration, a cache warm-up) is just a service
 that returns nothing. It joins the same graph.
 
+Need a service only inside a method, not at start? Skip `deps` and use its proxy
+directly — `deps` sets start order, while method calls run later, when
+everything is up. Two services can use each other this way, as long as the
+`deps` edges don't form a cycle.
+
 ## Run a group
 
 A runtime starts a set of services in dependency order and stops them in
@@ -167,15 +172,20 @@ boot0 splits errors in two:
 - **Setup mistakes throw** — using a service before start, passing a non-service
   as a dependency, or a dependency cycle. These fail fast, before anything runs.
 - **Runtime failures are logged** — a `start` or `stop` that throws is caught,
-  logged, and passed to `onError`. A failed group start rolls back what it
-  already started.
+  passed through `transformError`, logged, and handed to `onError`. A failed
+  group start rolls back what it already started.
 
 ```ts
 const boot = Boot0.create({
+  // Normalize any thrown value into your own error type — runs first.
+  transformError: (error, info) => new AppError(error, info),
   onError: (error, info) => report(error, info), // info: { scope, name, phase }
   shutdownOnError: true, // an unrecoverable start error → shutdown(1)
 })
 ```
+
+The result of `transformError` is what gets logged, sent to `onError`, and
+rethrown — so a `start` caller rejects with your error type.
 
 ## Hooks and logging
 
@@ -185,7 +195,7 @@ ones.
 
 ```ts
 const boot = Boot0.create({
-  logger: { log: pino().info, enabled: true },
+  logger: { log: pino().info }, // enabled by default; set enabled: false to silence
   onServiceStarted: ({ name }) => metrics.up(name),
 })
 
@@ -199,14 +209,15 @@ boot.createService('db', {
 
 ### `Boot0.create(config?)`
 
-| Config field                                   | Type                    | What it does                               |
-| ---------------------------------------------- | ----------------------- | ------------------------------------------ |
-| `logger`                                       | `{ log, enabled }`      | Your log function and an on/off switch.    |
-| `onService{Starting,Started,Stopping,Stopped}` | `({ name }) => void`    | Global service lifecycle hooks.            |
-| `onRuntime{Starting,Started,Stopping,Stopped}` | `({ name }) => void`    | Global runtime lifecycle hooks.            |
-| `onError`                                      | `(error, info) => void` | Called on any runtime failure.             |
-| `shutdownOnError`                              | `boolean`               | Unrecoverable start error → `shutdown(1)`. |
-| `shutdownOnSignals`                            | `boolean`               | SIGINT / SIGTERM → `shutdown()`.           |
+| Config field                                   | Type                       | What it does                               |
+| ---------------------------------------------- | -------------------------- | ------------------------------------------ |
+| `logger`                                       | `{ log, enabled }`         | Your log function and an on/off switch.    |
+| `onService{Starting,Started,Stopping,Stopped}` | `({ name }) => void`       | Global service lifecycle hooks.            |
+| `onRuntime{Starting,Started,Stopping,Stopped}` | `({ name }) => void`       | Global runtime lifecycle hooks.            |
+| `onError`                                      | `(error, info) => void`    | Called on any runtime failure.             |
+| `transformError`                               | `(error, info) => unknown` | Normalize a thrown value (runs first).     |
+| `shutdownOnError`                              | `boolean`                  | Unrecoverable start error → `shutdown(1)`. |
+| `shutdownOnSignals`                            | `boolean`                  | SIGINT / SIGTERM → `shutdown()`.           |
 
 ### Instance
 
