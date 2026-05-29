@@ -1,7 +1,8 @@
-import { describe, expect, it, mock } from 'bun:test'
+import { describe, expect, it, mock, spyOn } from 'bun:test'
 import { Boot0, SERVICE } from './index.js'
 
 const quiet = () => Boot0.create({ logger: { enabled: false } })
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 describe('service lifecycle', () => {
   it('throws when used before start, returns the value after, throws after stop', async () => {
@@ -280,5 +281,140 @@ describe('instance teardown', () => {
     off()
     await boot.stop()
     expect(cb).not.toHaveBeenCalled()
+  })
+
+  it('stops every runtime of the instance', async () => {
+    const boot = quiet()
+    const a = boot.createService('a', { start: () => ({}) })
+    const b = boot.createService('b', { start: () => ({}) })
+    const one = boot.createRuntime('one', { a })
+    const two = boot.createRuntime('two', { b })
+
+    await one.start()
+    await two.start()
+    await boot.stop()
+
+    expect(one.status).toEqual({ a: 'stopped' })
+    expect(two.status).toEqual({ b: 'stopped' })
+  })
+})
+
+describe('idempotency', () => {
+  it('starts a service only once', async () => {
+    const boot = quiet()
+    const start = mock(() => ({}))
+    const svc = boot.createService('s', { start })
+
+    await boot.startService(svc)
+    await boot.startService(svc)
+    expect(start).toHaveBeenCalledTimes(1)
+  })
+
+  it('stop is a no-op before start and runs once', async () => {
+    const boot = quiet()
+    const stop = mock(() => {})
+    const svc = boot.createService('s', { start: () => ({}), stop })
+
+    await boot.stopService(svc) // before start: no-op
+    expect(stop).not.toHaveBeenCalled()
+
+    await boot.startService(svc)
+    await boot.stopService(svc)
+    await boot.stopService(svc) // already stopped: no-op
+    expect(stop).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('async lifecycle', () => {
+  it('awaits async start and keeps dependency order', async () => {
+    const boot = quiet()
+    const order: string[] = []
+    const a = boot.createService('a', {
+      start: async () => {
+        await delay(5)
+        order.push('a')
+        return { v: 1 }
+      },
+    })
+    const b = boot.createService('b', {
+      deps: { a },
+      start: async () => {
+        await delay(1)
+        order.push('b')
+        return { v: a.v + 1 }
+      },
+    })
+
+    await boot.createRuntime('app', { a, b }).start()
+    expect(order).toEqual(['a', 'b'])
+    expect(b.v).toBe(2)
+  })
+})
+
+describe('transparent dependency restart', () => {
+  it('dependents see the new value after a dependency restarts', async () => {
+    const boot = quiet()
+    let build = 0
+    const config = boot.createService('config', { start: () => ({ build: ++build }) })
+    const reader = boot.createService('reader', {
+      deps: { config },
+      start: () => ({ read: () => config.build }), // captures the proxy, not the value
+    })
+
+    await boot.createRuntime('app', { config, reader }).start()
+    expect(reader.read()).toBe(1)
+
+    await boot.restartService(config)
+    expect(reader.read()).toBe(2) // same reader, new config value
+  })
+})
+
+describe('proxy behavior', () => {
+  it('forwards property enumeration once started', async () => {
+    const boot = quiet()
+    const svc = boot.createService('s', { start: () => ({ a: 1, b: 2 }) })
+    await boot.startService(svc)
+
+    expect('a' in svc).toBe(true)
+    expect(Object.keys(svc).sort()).toEqual(['a', 'b'])
+    expect({ ...svc } as unknown as Record<string, number>).toEqual({ a: 1, b: 2 })
+  })
+})
+
+describe('error policy', () => {
+  it('passes start failures to onError with scope, name, and phase', async () => {
+    const seen: unknown[] = []
+    const boot = Boot0.create({
+      logger: { enabled: false },
+      onError: (_error, info) => seen.push(info),
+    })
+    const svc = boot.createService('flaky', {
+      start: (): { v: number } => {
+        throw new Error('nope')
+      },
+    })
+
+    await boot.startService(svc).catch(() => {})
+    expect(seen).toEqual([{ scope: 'service', name: 'flaky', phase: 'start' }])
+  })
+
+  it('runs shutdown(1) on an unrecoverable start error when configured', async () => {
+    const exit = spyOn(process, 'exit').mockImplementation((() => undefined) as never)
+    try {
+      const boot = Boot0.create({ logger: { enabled: false }, shutdownOnError: true })
+      const a = boot.createService('a', { start: () => ({ v: 1 }), stop: () => {} })
+      const b = boot.createService('b', {
+        deps: { a },
+        start: (): { v: number } => {
+          throw new Error('boom')
+        },
+      })
+
+      await boot.createRuntime('app', { a, b }).start()
+      expect(exit).toHaveBeenCalledWith(1)
+      expect(boot.isServiceStarted(a)).toBe(false) // rolled back before exit
+    } finally {
+      exit.mockRestore()
+    }
   })
 })
