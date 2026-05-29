@@ -174,8 +174,12 @@ await boot.shutdown() // stop everything, run onShutdown callbacks, then exit
 // Register cleanup that isn't a service:
 boot.onShutdown(() => clearTempDir())
 
-// Or wire it to signals at create time:
-const boot = Boot0.create({ shutdownOnSignals: true }) // SIGINT / SIGTERM → shutdown()
+// Let boot0 own the process lifecycle:
+const boot = Boot0.create({
+  shutdownOnSignals: true, // SIGINT (exit 130) / SIGTERM (exit 0) → shutdown()
+  shutdownOnUncaught: true, // uncaughtException / unhandledRejection → shutdown(1)
+  shutdownTimeoutMs: 30_000, // force exit if teardown hangs past this
+})
 ```
 
 ## Hide the manager from the type
@@ -267,15 +271,17 @@ If that's your app, it's the right size.
 
 ### `Boot0.create(config?)`
 
-| Config field                                   | Type                       | What it does                               |
-| ---------------------------------------------- | -------------------------- | ------------------------------------------ |
-| `logger`                                       | `{ log, enabled }`         | Your log function and an on/off switch.    |
-| `onService{Starting,Started,Stopping,Stopped}` | `({ name }) => void`       | Global service lifecycle hooks.            |
-| `onRuntime{Starting,Started,Stopping,Stopped}` | `({ name }) => void`       | Global runtime lifecycle hooks.            |
-| `onError`                                      | `(error, info) => void`    | Called on any runtime failure.             |
-| `transformError`                               | `(error, info) => unknown` | Normalize a thrown value (runs first).     |
-| `shutdownOnError`                              | `boolean`                  | Unrecoverable start error → `shutdown(1)`. |
-| `shutdownOnSignals`                            | `boolean`                  | SIGINT / SIGTERM → `shutdown()`.           |
+| Config field                                   | Type                       | What it does                                |
+| ---------------------------------------------- | -------------------------- | ------------------------------------------- |
+| `logger`                                       | `{ log, enabled }`         | Your log function and an on/off switch.     |
+| `onService{Starting,Started,Stopping,Stopped}` | `({ name }) => void`       | Global service lifecycle hooks.             |
+| `onRuntime{Starting,Started,Stopping,Stopped}` | `({ name }) => void`       | Global runtime lifecycle hooks.             |
+| `onError`                                      | `(error, info) => void`    | Called on any runtime failure.              |
+| `transformError`                               | `(error, info) => unknown` | Normalize a thrown value (runs first).      |
+| `shutdownOnError`                              | `boolean`                  | Unrecoverable start error → `shutdown(1)`.  |
+| `shutdownOnSignals`                            | `boolean`                  | SIGINT (130) / SIGTERM (0) → `shutdown()`.  |
+| `shutdownOnUncaught`                           | `boolean`                  | uncaught error / rejection → `shutdown(1)`. |
+| `shutdownTimeoutMs`                            | `number`                   | Force exit if teardown hangs past this.     |
 
 ### Instance
 
