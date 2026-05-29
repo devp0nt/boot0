@@ -6,6 +6,8 @@
 [![npm](https://img.shields.io/npm/v/@devp0nt/boot0.svg)](https://www.npmjs.com/package/@devp0nt/boot0)
 [![license](https://img.shields.io/npm/l/@devp0nt/boot0.svg)](./LICENSE)
 
+<!-- docs:start -->
+
 Declare your services as plain functions. boot0 hands back a stable, typed proxy
 you can import anywhere — before anything starts. Call `start`, and the real
 value appears behind the proxy, in dependency order. No classes, no decorators.
@@ -243,6 +245,8 @@ boot.createService('db', {
 
 - **Bun 1+** or **Node.js 20+** (ESM only)
 - **TypeScript 5+** (optional — works in plain JS too)
+
+<!-- docs:end -->
 
 ## Community
 
