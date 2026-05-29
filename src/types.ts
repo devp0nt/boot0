@@ -94,8 +94,12 @@ export interface BootConfig {
   transformError?: (error: unknown, info: ErrorInfo) => unknown
   /** On an unrecoverable start error, run `shutdown(1)`. */
   shutdownOnError?: boolean
-  /** On SIGINT / SIGTERM, run `shutdown()`. */
+  /** On SIGINT (exit 130) / SIGTERM (exit 0), run `shutdown()`. */
   shutdownOnSignals?: boolean
+  /** On `uncaughtException` / `unhandledRejection`, log and run `shutdown(1)`. */
+  shutdownOnUncaught?: boolean
+  /** Max time for `shutdown` teardown before it forces `process.exit`, in ms. */
+  shutdownTimeoutMs?: number
 }
 
 export interface RuntimeHooks {

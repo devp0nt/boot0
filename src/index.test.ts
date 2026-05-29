@@ -489,6 +489,40 @@ describe('logging', () => {
   })
 })
 
+describe('shutdown options', () => {
+  it('forces exit after shutdownTimeoutMs when teardown hangs', async () => {
+    const exit = spyOn(process, 'exit').mockImplementation((() => undefined) as never)
+    try {
+      const boot = Boot0.create({ logger: { enabled: false }, shutdownTimeoutMs: 30 })
+      const svc = boot.createService('slow', {
+        start: () => ({}),
+        stop: () => new Promise<void>(() => {}), // never resolves
+      })
+      await boot.startService(svc)
+      await boot.shutdown(0)
+      expect(exit).toHaveBeenCalledWith(0)
+    } finally {
+      exit.mockRestore()
+    }
+  })
+
+  it('registers uncaught handlers when shutdownOnUncaught is set', () => {
+    const beforeEx = process.listeners('uncaughtException')
+    const beforeRej = process.listeners('unhandledRejection')
+    Boot0.create({ logger: { enabled: false }, shutdownOnUncaught: true })
+    const addedEx = process.listeners('uncaughtException').filter((fn) => !beforeEx.includes(fn))
+    const addedRej = process.listeners('unhandledRejection').filter((fn) => !beforeRej.includes(fn))
+    expect(addedEx).toHaveLength(1)
+    expect(addedRej).toHaveLength(1)
+    for (const fn of addedEx) {
+      process.removeListener('uncaughtException', fn)
+    }
+    for (const fn of addedRej) {
+      process.removeListener('unhandledRejection', fn)
+    }
+  })
+})
+
 // Type-level tests. This function is never called — `tsc` checks its body, and
 // runtime access on an unstarted proxy would throw, so it must not execute.
 function assertTypes() {
