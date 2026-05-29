@@ -17,5 +17,6 @@ export type {
   ServiceHookInfo,
   ServiceManager,
   ServiceStatus,
+  ServiceValue,
 } from './types.js'
 export { Boot0 } from './boot.js'

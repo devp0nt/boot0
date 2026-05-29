@@ -258,7 +258,8 @@ describe('hidden services', () => {
     expect(boot.getStatus(svc)).toBe('idle')
     await boot.startService(svc)
     expect(boot.getStatus(svc)).toBe('started')
-    expect(boot.getOriginal<typeof raw>(svc)).toBe(raw)
+    expect(boot.getOriginal(svc)).toBe(raw)
+    expect(boot.getOriginal(svc).v).toBe(1) // type inferred, no generic needed
   })
 })
 

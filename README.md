@@ -147,7 +147,7 @@ await boot.startService(db)
 await boot.restartService(db) // dependents keep their proxy — they don't notice
 boot.isServiceStarted(db) // true
 boot.getStatus(db) // 'started'
-boot.getOriginal<Client>(db) // the real Client, unproxied
+boot.getOriginal(db) // the real Client, unproxied — type inferred from db
 
 // Or through the manager on the symbol:
 import { SERVICE } from '@devp0nt/boot0'
@@ -279,18 +279,18 @@ If that's your app, it's the right size.
 
 ### Instance
 
-| Call                                  | Result                                                         |
-| ------------------------------------- | -------------------------------------------------------------- |
-| `createService(name, def)`            | A typed proxy for the service.                                 |
-| `createRuntime(name, services, opts)` | A runtime: `start` / `stop` / `restart` / `status` + services. |
-| `startService(x)` / `stopService(x)`  | Start / stop one service.                                      |
-| `restartService(x)`                   | Stop then start one service.                                   |
-| `isServiceStarted(x)`                 | `boolean`.                                                     |
-| `getStatus(x)`                        | The service's `ServiceStatus`.                                 |
-| `getOriginal<T>(x)`                   | The started value, unproxied (throws before start).            |
-| `stop()`                              | Stop all runtimes, then leftover services.                     |
-| `shutdown(code?)`                     | `stop()` + run `onShutdown` callbacks + `process.exit`.        |
-| `onShutdown(cb)`                      | Register a teardown callback. Returns an unregister function.  |
+| Call                                  | Result                                                             |
+| ------------------------------------- | ------------------------------------------------------------------ |
+| `createService(name, def)`            | A typed proxy for the service.                                     |
+| `createRuntime(name, services, opts)` | A runtime: `start` / `stop` / `restart` / `status` + services.     |
+| `startService(x)` / `stopService(x)`  | Start / stop one service.                                          |
+| `restartService(x)`                   | Stop then start one service.                                       |
+| `isServiceStarted(x)`                 | `boolean`.                                                         |
+| `getStatus(x)`                        | The service's `ServiceStatus`.                                     |
+| `getOriginal(x)`                      | The started value, unproxied; type inferred (throws before start). |
+| `stop()`                              | Stop all runtimes, then leftover services.                         |
+| `shutdown(code?)`                     | `stop()` + run `onShutdown` callbacks + `process.exit`.            |
+| `onShutdown(cb)`                      | Register a teardown callback. Returns an unregister function.      |
 
 ### `createService(name, def)`
 

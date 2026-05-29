@@ -25,6 +25,12 @@ export type Service<T, Hidden extends boolean = false> = Hidden extends true
   ? T
   : T & { readonly [SERVICE]: ServiceManager<T> }
 
+/**
+ * The value behind a service proxy: unwraps the manager marker for a normal service, or the value itself for a hidden
+ * one. Lets helpers infer the type from the service, so you don't pass a generic.
+ */
+export type ServiceValue<S> = S extends { [SERVICE]: ServiceManager<infer U> } ? U : S
+
 export interface ErrorInfo {
   scope: 'service' | 'runtime'
   name: string
@@ -119,12 +125,12 @@ export interface Boot {
     services: S,
     options?: RuntimeOptions,
   ) => Runtime<S>
-  startService: (service: object) => Promise<unknown>
+  startService: <S extends object>(service: S) => Promise<ServiceValue<S>>
   stopService: (service: object) => Promise<void>
-  restartService: (service: object) => Promise<unknown>
+  restartService: <S extends object>(service: S) => Promise<ServiceValue<S>>
   isServiceStarted: (service: object) => boolean
   getStatus: (service: object) => ServiceStatus
-  getOriginal: <T = unknown>(service: object) => T
+  getOriginal: <S extends object>(service: S) => ServiceValue<S>
   stop: () => Promise<void>
   shutdown: (code?: number) => Promise<void>
   onShutdown: (callback: () => unknown) => () => void
