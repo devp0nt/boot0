@@ -38,7 +38,7 @@ export const makeRuntime = (
       try {
         await hook()
       } catch (error) {
-        ctx.log(`boot0: a lifecycle hook for runtime "${name}" threw:`, error)
+        ctx.log('warn', `a lifecycle hook for runtime "${name}" threw`, error)
       }
     }
   }
@@ -46,6 +46,7 @@ export const makeRuntime = (
   const runtime = {
     ...services,
     start: async (subset?: string[]): Promise<void> => {
+      ctx.log('debug', `runtime "${name}" starting`)
       await fireRuntime([() => ctx.config.onRuntimeStarting?.({ name }), options.onStarting])
       try {
         await startManagers(ctx, resolveTargets(subset))
@@ -54,16 +55,19 @@ export const makeRuntime = (
           try {
             options.onError(error, { scope: 'runtime', name, phase: 'start' })
           } catch (hookError) {
-            ctx.log(`boot0: onError hook for runtime "${name}" threw:`, hookError)
+            ctx.log('warn', `onError hook for runtime "${name}" threw`, hookError)
           }
         }
         throw error
       }
+      ctx.log('info', `runtime "${name}" started`)
       await fireRuntime([() => ctx.config.onRuntimeStarted?.({ name }), options.onStarted])
     },
     stop: async (subset?: string[]): Promise<void> => {
+      ctx.log('debug', `runtime "${name}" stopping`)
       await fireRuntime([() => ctx.config.onRuntimeStopping?.({ name }), options.onStopping])
       await stopManagers(ctx, resolveTargets(subset))
+      ctx.log('info', `runtime "${name}" stopped`)
       await fireRuntime([() => ctx.config.onRuntimeStopped?.({ name }), options.onStopped])
     },
     restart: async (subset?: string[]): Promise<void> => {

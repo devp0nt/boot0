@@ -6,6 +6,7 @@ export type {
   ErrorHook,
   ErrorInfo,
   LoggerConfig,
+  LogLevel,
   Runtime,
   RuntimeHookInfo,
   RuntimeHooks,

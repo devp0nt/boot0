@@ -1,4 +1,12 @@
-import type { BootConfig, ErrorHook, ErrorInfo, InternalManager, InternalRuntime, LoggerConfig } from './types.js'
+import type {
+  BootConfig,
+  ErrorHook,
+  ErrorInfo,
+  InternalManager,
+  InternalRuntime,
+  LoggerConfig,
+  LogLevel,
+} from './types.js'
 
 /** Shared state every service and runtime of one boot instance runs against. */
 export interface BootContext {
@@ -7,26 +15,33 @@ export interface BootContext {
   services: Set<InternalManager>
   runtimes: Set<InternalRuntime>
   shutdownCallbacks: Array<() => unknown>
-  log: (...args: unknown[]) => void
+  log: (level: LogLevel, message: string, ...details: unknown[]) => void
   reportError: (error: unknown, info: ErrorInfo, localHook?: ErrorHook) => unknown
   shutdown: (code?: number) => Promise<void>
+}
+
+const consoleLog: LoggerConfig['log'] = (level, message, ...details) => {
+  const line = `[boot0] ${message}`
+  if (level === 'error') {
+    console.error(line, ...details)
+  } else if (level === 'warn') {
+    console.warn(line, ...details)
+  } else {
+    console.log(line, ...details)
+  }
 }
 
 const callHook = (ctx: BootContext, hook: () => unknown): void => {
   try {
     void hook()
   } catch (error) {
-    ctx.log('boot0: an error hook threw:', error)
+    ctx.log('warn', 'an error hook threw', error)
   }
 }
 
 export const createContext = (config: BootConfig): BootContext => {
   const logger: LoggerConfig = {
-    log:
-      config.logger?.log ??
-      ((...args: unknown[]) => {
-        console.error(...args)
-      }),
+    log: config.logger?.log ?? consoleLog,
     enabled: config.logger?.enabled ?? true,
   }
 
@@ -36,9 +51,9 @@ export const createContext = (config: BootConfig): BootContext => {
     services: new Set(),
     runtimes: new Set(),
     shutdownCallbacks: [],
-    log: (...args) => {
+    log: (level, message, ...details) => {
       if (logger.enabled) {
-        logger.log(...args)
+        logger.log(level, message, ...details)
       }
     },
     reportError: (error, info, localHook) => {
@@ -47,10 +62,10 @@ export const createContext = (config: BootConfig): BootContext => {
         try {
           reported = config.transformError(error, info)
         } catch (hookError) {
-          ctx.log('boot0: transformError threw:', hookError)
+          ctx.log('warn', 'transformError threw', hookError)
         }
       }
-      ctx.log(`boot0: ${info.scope} "${info.name}" failed during ${info.phase}:`, reported)
+      ctx.log('error', `${info.scope} "${info.name}" failed during ${info.phase}`, reported)
       if (config.onError) {
         callHook(ctx, () => config.onError?.(reported, info))
       }

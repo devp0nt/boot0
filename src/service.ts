@@ -21,7 +21,7 @@ const fire = async (ctx: BootContext, label: string, hooks: Array<(() => unknown
     try {
       await hook()
     } catch (error) {
-      ctx.log(`boot0: a lifecycle hook for ${label} threw:`, error)
+      ctx.log('warn', `a lifecycle hook for ${label} threw`, error)
     }
   }
 }
@@ -98,6 +98,7 @@ export const makeService = (ctx: BootContext, name: string, def: ServiceDef<any,
       return
     }
     status = 'starting'
+    ctx.log('debug', `service "${name}" starting`)
     await fire(ctx, label, [() => ctx.config.onServiceStarting?.({ name }), def.onStarting])
     try {
       value = await def.start()
@@ -106,6 +107,7 @@ export const makeService = (ctx: BootContext, name: string, def: ServiceDef<any,
       throw ctx.reportError(error, { scope: 'service', name, phase: 'start' }, def.onError)
     }
     status = 'started'
+    ctx.log('info', `service "${name}" started`)
     await fire(ctx, label, [() => ctx.config.onServiceStarted?.({ name }), () => def.onStarted?.(value)])
   }
 
@@ -115,6 +117,7 @@ export const makeService = (ctx: BootContext, name: string, def: ServiceDef<any,
     }
     const current = value
     status = 'stopping'
+    ctx.log('debug', `service "${name}" stopping`)
     await fire(ctx, label, [() => ctx.config.onServiceStopping?.({ name }), () => def.onStopping?.(current)])
     try {
       await def.stop?.(current)
@@ -123,6 +126,7 @@ export const makeService = (ctx: BootContext, name: string, def: ServiceDef<any,
     }
     value = undefined
     status = 'stopped'
+    ctx.log('info', `service "${name}" stopped`)
     await fire(ctx, label, [() => ctx.config.onServiceStopped?.({ name }), def.onStopped])
   }
 
@@ -171,7 +175,7 @@ export const startManagers = async (ctx: BootContext, targets: InternalManager[]
       try {
         await manager.stopSelf()
       } catch (rollbackError) {
-        ctx.log(`boot0: rollback stop of "${manager.name}" failed:`, rollbackError)
+        ctx.log('error', `rollback stop of "${manager.name}" failed`, rollbackError)
       }
     }
     if (ctx.config.shutdownOnError) {

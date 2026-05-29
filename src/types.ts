@@ -49,8 +49,10 @@ export interface ServiceDef<TReturn, Hidden extends boolean> {
   onError?: ErrorHook
 }
 
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
+
 export interface LoggerConfig {
-  log: (...args: unknown[]) => void
+  log: (level: LogLevel, message: string, ...details: unknown[]) => void
   enabled: boolean
 }
 
